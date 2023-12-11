@@ -46,7 +46,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val navController = rememberNavController()
-            val viewModel: MainViewModel = viewModel()
+            val viewModel: MainViewModel = viewModel(factory = MainViewModelFactory(bom))
 
             ScriptureSearchGameTheme {
                 // A surface container using the 'background' color from the theme
@@ -56,7 +56,7 @@ class MainActivity : ComponentActivity() {
                 ) {
                     Column {
                         Box(Modifier.fillMaxHeight(1/4f)) {
-                            Prompt()
+                            Prompt(navController, viewModel)
                         }
                         Divider(thickness = 4.dp, color = Color.Cyan)
                         Box(Modifier.fillMaxSize()) {
@@ -70,8 +70,28 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun Prompt() {
-    Text(text = "TEST PROMPT!!!")
+fun Prompt(navController: NavHostController, viewModel: MainViewModel) {
+    val state = viewModel.promptState.collectAsState()
+
+    when (state.value) {
+        MainViewModel.PromptState.Unstarted -> {
+            Button(onClick = { viewModel.onStartPrompt() }) {
+                Text(text = "Start")
+            }
+        }
+        MainViewModel.PromptState.Playing -> {
+            val promptText = viewModel.promptText.collectAsState()
+            Text(text = promptText.value)
+        }
+        MainViewModel.PromptState.Guessed -> {
+            Column {
+                Text(text = "Correct!")
+                Button(onClick = { viewModel.onContinuePrompt { navController.navigate(it) } }) {
+                    Text(text = "New Verse")
+                }
+            }
+        }
+    }
 }
 
 @Composable
