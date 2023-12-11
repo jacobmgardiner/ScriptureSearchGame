@@ -3,12 +3,17 @@ package com.example.scripturesearchgame
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -22,10 +27,14 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -55,10 +64,15 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     Column {
-                        Box(Modifier.fillMaxHeight(1/4f)) {
+                        Surface(
+                            modifier = Modifier.fillMaxHeight(1/4f),
+                            tonalElevation = 4.dp,
+                            shadowElevation = 4.dp,
+                        ) {
                             Prompt(navController, viewModel)
                         }
-                        Divider(thickness = 4.dp, color = Color.Cyan)
+//                        Divider(thickness = 4.dp, color = Color.Cyan)
+                        Divider(thickness = 4.dp)
                         Box(Modifier.fillMaxSize()) {
                             VerseSelection(navController, viewModel, bom)
                         }
@@ -75,13 +89,40 @@ fun Prompt(navController: NavHostController, viewModel: MainViewModel) {
 
     when (state.value) {
         MainViewModel.PromptState.Unstarted -> {
-            Button(onClick = { viewModel.onStartPrompt() }) {
-                Text(text = "Start")
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Button(onClick = { viewModel.onStartPrompt() }) {
+                    Text(text = "Start")
+                }
             }
         }
         MainViewModel.PromptState.Playing -> {
             val promptText = viewModel.promptText.collectAsState()
-            Text(text = promptText.value)
+            val hintText = viewModel.hintText.collectAsState()
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(text = promptText.value)
+                Spacer(modifier = Modifier)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Button(onClick = { viewModel.onSkip {navController.navigate(it)} }) {
+                        Text(text = "Skip")
+                    }
+
+                    Row {
+                        Button(onClick = { viewModel.onHint() }) {
+                            Text(text = "Hint")
+                        }
+                        Text(text = hintText.value)
+                    }
+                }
+            }
         }
         MainViewModel.PromptState.Guessed -> {
             Column {
@@ -108,24 +149,65 @@ fun VerseSelection(navController: NavHostController, viewModel: MainViewModel, b
 fun Books(navController: NavHostController, viewModel: MainViewModel, bom: BookOfMormon) {
     LazyColumn(Modifier.fillMaxWidth()) {
         items(bom.books) { book ->
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                onClick = { viewModel.onBookSelected(book) { navController.navigate(it) } }
-            ) {
-                Text(text = book.book)
+            Box(Modifier.fillMaxWidth()) {
+                Divider(thickness = 2.dp)
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+//                    modifier = Modifier.fillParentMaxSize(),
+                    onClick = { viewModel.onBookSelected(book) { navController.navigate(it) } }
+                ) {
+                    Text(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp, 4.dp),
+                        text = book.book
+                    )
+                }
             }
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun Chapters(navController: NavHostController, viewModel: MainViewModel) {
     LazyVerticalGrid(
         columns = GridCells.Adaptive(minSize = 64.dp)
     ) {
-        items(viewModel.selectedBook?.chapters ?: listOf()) { chapter ->
-            Button(onClick = { viewModel.onChapterSelected(chapter) { navController.navigate(it) } }) {
-                Text(text = chapter.chapter.toString())
+        items(
+            viewModel.selectedBook?.chapters ?: listOf()
+        ) { chapter ->
+//            Button(onClick = { viewModel.onChapterSelected(chapter) { navController.navigate(it) } }) {
+//                Text(text = chapter.chapter.toString())
+//            }
+            Box(
+                modifier = Modifier
+//                    .fillMaxSize()
+                    .size(64.dp)
+                    .padding(2.dp),
+//                contentAlignment = Alignment.Center
+            ) {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    onClick = { viewModel.onChapterSelected(chapter) { navController.navigate(it) } },
+                    shadowElevation = 4.dp,
+                    tonalElevation = 4.dp,
+//                border = BorderStroke(width = 2.dp, color = Color.LightGray),
+//                    color = Color.White,
+                ) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            modifier = Modifier.fillMaxSize(),
+//                        .padding(16.dp, 4.dp),
+                            text = chapter.chapter.toString(),
+                            textAlign = TextAlign.Center,
+                            fontSize = 20.sp
+                        )
+                    }
+                }
             }
         }
     }
@@ -139,6 +221,7 @@ fun Verses(navController: NavHostController, viewModel: MainViewModel) {
     LazyColumn(modifier = Modifier.fillMaxWidth()) {
         items(viewModel.selectedChapter?.verses ?: listOf()) { verse ->
             Surface(
+                modifier = Modifier.fillMaxWidth(),
                 color = if (selectedVerse.value?.verse == verse.verse) {
                     if (viewModel.correctGuess) Color.Green else Color.Red
                 } else Color.Transparent,
@@ -149,6 +232,7 @@ fun Verses(navController: NavHostController, viewModel: MainViewModel) {
                     text = "${verse.verse} ${verse.text}"
                 )
             }
+            Divider(thickness = 2.dp)
         }
     }
 }

@@ -3,6 +3,7 @@ package com.example.scripturesearchgame
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -23,22 +24,37 @@ class MainViewModel(private val bom: BookOfMormon) : ViewModel() {
     }
     private val _promptState = MutableStateFlow(PromptState.Unstarted)
     val promptState = _promptState.asStateFlow()
-    private var promptVerse: Verse? = null
+    private var answerBook: Book? = null
+    private var answerChapter: Chapter? = null
+    private var answerVerse: Verse? = null
     private var elapsedTime: Long? = null
     private var promptWords = listOf<String>()
     private val _promptText = MutableStateFlow("")
     val promptText = _promptText.asStateFlow()
+    private var hintWords = listOf<String>()
+    private val _hintText = MutableStateFlow("")
+    val hintText = _hintText.asStateFlow()
     private var wordCount = 0
+    private var hintCount = 0
+    private var updateTextJob: Job? = null
     private fun chooseNextPrompt() {
-        val randBook = bom.books[Random.nextInt(bom.books.size)]
-        val randChapter = randBook.chapters[Random.nextInt(randBook.chapters.size)]
-        promptVerse = randChapter.verses[Random.nextInt(randChapter.verses.size)]
+        answerBook = bom.books[Random.nextInt(bom.books.size)]
+        answerChapter = answerBook?.chapters?.get(Random.nextInt(answerBook?.chapters?.size ?: 0))
+        answerVerse = answerChapter?.verses?.get(Random.nextInt(answerChapter?.verses?.size ?: 0))
     }
     fun onStartPrompt() {
         chooseNextPrompt()
         _promptState.value = PromptState.Playing
-        promptWords = promptVerse?.text?.split(" ") ?: listOf()
-        val updateText = viewModelScope.launch {
+        promptWords = answerVerse?.text?.split(" ") ?: listOf()
+//        hintWords = answerVerse?.reference?.split(" ") ?: listOf()
+        hintWords = listOf("${answerBook?.book}", " ${answerChapter?.chapter}", ":${answerVerse?.verse}")
+        hintCount = 0
+        _hintText.value = ""
+
+        updateTextJob?.cancel()
+        updateTextJob = viewModelScope.launch {
+            wordCount = 0
+            _promptText.value = ""
             while (promptState.value == PromptState.Playing) {
                 onPromptTextUpdate()
                 delay(1000)
@@ -58,6 +74,15 @@ class MainViewModel(private val bom: BookOfMormon) : ViewModel() {
     fun onContinuePrompt(onNav: (String) -> Unit) {
         _promptState.value = PromptState.Unstarted
         onNav("books")
+    }
+    fun onHint() {
+        if (hintCount >= hintWords.size) {
+            return
+        }
+        _hintText.value += hintWords[hintCount++]
+    }
+    fun onSkip(onNav: (String) -> Unit) {
+        onContinuePrompt(onNav)
     }
 
 
@@ -87,7 +112,7 @@ class MainViewModel(private val bom: BookOfMormon) : ViewModel() {
 
     fun onVerseSelected(verse: Verse) {
         _selectedVerse.value = verse
-        correctGuess = promptVerse?.text == verse.text
+        correctGuess = answerVerse?.text == verse.text
         if (correctGuess) {
             _promptState.value = PromptState.Guessed
         }
