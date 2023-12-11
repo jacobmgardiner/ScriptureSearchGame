@@ -20,14 +20,18 @@ class MainViewModel : ViewModel() {
 
     var correctGuess: Boolean = false
 
-    fun onBookSelected(book: Book) {
+    fun onBookSelected(book: Book, onNav: (String) -> Unit) {
         _selectorState.value = SelectorState.CHAPTERS
         selectedBook = book
+
+        onNav("books/${book.book}/chapters")
     }
 
-    fun onChapterSelected(chapter: Chapter) {
+    fun onChapterSelected(chapter: Chapter, onNav: (String) -> Unit) {
         _selectorState.value = SelectorState.VERSES
         selectedChapter = chapter
+
+        onNav("books/${selectedBook?.book}/chapters/${selectedChapter?.chapter}")
     }
 
     fun onVerseSelected(verse: Verse) {

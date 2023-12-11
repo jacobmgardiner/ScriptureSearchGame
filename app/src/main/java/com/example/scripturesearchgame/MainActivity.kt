@@ -3,9 +3,6 @@ package com.example.scripturesearchgame
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -21,17 +18,19 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Shapes
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.example.scripturesearchgame.ui.theme.ScriptureSearchGameTheme
 import com.google.gson.Gson
 
@@ -46,6 +45,7 @@ class MainActivity : ComponentActivity() {
         val bom = Gson().fromJson(jsonString, BookOfMormon::class.java)
 
         setContent {
+            val navController = rememberNavController()
             val viewModel: MainViewModel = viewModel()
 
             ScriptureSearchGameTheme {
@@ -60,7 +60,7 @@ class MainActivity : ComponentActivity() {
                         }
                         Divider(thickness = 4.dp, color = Color.Cyan)
                         Box(Modifier.fillMaxSize()) {
-                            VerseSelection(viewModel, bom)
+                            VerseSelection(navController, viewModel, bom)
                         }
                     }
                 }
@@ -75,21 +75,23 @@ fun Prompt() {
 }
 
 @Composable
-fun VerseSelection(viewModel: MainViewModel, bom: BookOfMormon) {
-    val state = viewModel.selectorState.collectAsState()
-    
-    when (state.value) {
-        MainViewModel.SelectorState.BOOKS -> { Books(viewModel, bom) }
-        MainViewModel.SelectorState.CHAPTERS -> { Chapters(viewModel) }
-        MainViewModel.SelectorState.VERSES -> { Verses(viewModel) }
+fun VerseSelection(navController: NavHostController, viewModel: MainViewModel, bom: BookOfMormon) {
+    NavHost(navController = navController, startDestination = "books") {
+        composable("books") { Books(navController, viewModel, bom) }
+        composable("books/{bookId}/chapters") { Chapters(navController, viewModel) }
+        composable("books/{bookId}/chapters/{chapterId}") { Verses(navController, viewModel) }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun Books(viewModel: MainViewModel, bom: BookOfMormon) {
+fun Books(navController: NavHostController, viewModel: MainViewModel, bom: BookOfMormon) {
     LazyColumn(Modifier.fillMaxWidth()) {
         items(bom.books) { book ->
-            Button(onClick = { viewModel.onBookSelected(book) }) {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                onClick = { viewModel.onBookSelected(book) { navController.navigate(it) } }
+            ) {
                 Text(text = book.book)
             }
         }
@@ -97,13 +99,12 @@ fun Books(viewModel: MainViewModel, bom: BookOfMormon) {
 }
 
 @Composable
-fun Chapters(viewModel: MainViewModel) {
-//    LazyColumn {
+fun Chapters(navController: NavHostController, viewModel: MainViewModel) {
     LazyVerticalGrid(
         columns = GridCells.Adaptive(minSize = 64.dp)
     ) {
         items(viewModel.selectedBook?.chapters ?: listOf()) { chapter ->
-            Button(onClick = { viewModel.onChapterSelected(chapter) }) {
+            Button(onClick = { viewModel.onChapterSelected(chapter) { navController.navigate(it) } }) {
                 Text(text = chapter.chapter.toString())
             }
         }
@@ -112,7 +113,7 @@ fun Chapters(viewModel: MainViewModel) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun Verses(viewModel: MainViewModel) {
+fun Verses(navController: NavHostController, viewModel: MainViewModel) {
     val selectedVerse = viewModel.selectedVerse.collectAsState()
 
     LazyColumn(modifier = Modifier.fillMaxWidth()) {
