@@ -6,7 +6,11 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -14,6 +18,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
+import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
@@ -42,7 +47,6 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val viewModel: MainViewModel = viewModel()
-            val state = viewModel.selectorState.collectAsState()
 
             ScriptureSearchGameTheme {
                 // A surface container using the 'background' color from the theme
@@ -50,11 +54,14 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    when (state.value) {
-                        MainViewModel.SelectorState.BOOKS -> { Books(viewModel, bom) }
-                        MainViewModel.SelectorState.CHAPTERS -> { Chapters(viewModel) }
-                        MainViewModel.SelectorState.VERSES -> { Verses(viewModel) }
-                        else -> {}
+                    Column {
+                        Box(Modifier.fillMaxHeight(1/4f)) {
+                            Prompt()
+                        }
+                        Divider(thickness = 4.dp, color = Color.Cyan)
+                        Box(Modifier.fillMaxSize()) {
+                            VerseSelection(viewModel, bom)
+                        }
                     }
                 }
             }
@@ -63,8 +70,24 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
+fun Prompt() {
+    Text(text = "TEST PROMPT!!!")
+}
+
+@Composable
+fun VerseSelection(viewModel: MainViewModel, bom: BookOfMormon) {
+    val state = viewModel.selectorState.collectAsState()
+    
+    when (state.value) {
+        MainViewModel.SelectorState.BOOKS -> { Books(viewModel, bom) }
+        MainViewModel.SelectorState.CHAPTERS -> { Chapters(viewModel) }
+        MainViewModel.SelectorState.VERSES -> { Verses(viewModel) }
+    }
+}
+
+@Composable
 fun Books(viewModel: MainViewModel, bom: BookOfMormon) {
-    LazyColumn {
+    LazyColumn(Modifier.fillMaxWidth()) {
         items(bom.books) { book ->
             Button(onClick = { viewModel.onBookSelected(book) }) {
                 Text(text = book.book)
@@ -92,7 +115,7 @@ fun Chapters(viewModel: MainViewModel) {
 fun Verses(viewModel: MainViewModel) {
     val selectedVerse = viewModel.selectedVerse.collectAsState()
 
-    LazyColumn {
+    LazyColumn(modifier = Modifier.fillMaxWidth()) {
         items(viewModel.selectedChapter?.verses ?: listOf()) { verse ->
             Surface(
                 color = if (selectedVerse.value?.verse == verse.verse) {
