@@ -125,8 +125,15 @@ fun Prompt(navController: NavHostController, viewModel: MainViewModel) {
             }
         }
         MainViewModel.PromptState.Guessed -> {
-            Column {
-                Text(text = "Correct!")
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = "Correct!",
+                    textAlign = TextAlign.Center
+                )
                 Button(onClick = { viewModel.onContinuePrompt { navController.navigate(it) } }) {
                     Text(text = "New Verse")
                 }
